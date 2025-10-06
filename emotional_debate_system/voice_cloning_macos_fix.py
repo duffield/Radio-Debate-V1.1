@@ -85,18 +85,8 @@ class VoiceCloner:
         try:
             print(f"🔄 Initializing Chatterbox on {self.device}...")
             
-            # Try to initialize with device parameter if supported
-            try:
-                self.model = ChatterboxTTS(device=self.device)
-            except TypeError:
-                # If device parameter not supported, try without it
-                self.model = ChatterboxTTS()
-                
-                # Try to move model to device if possible
-                if hasattr(self.model, 'to'):
-                    self.model = self.model.to(self.device)
-                elif hasattr(self.model, 'device'):
-                    self.model.device = self.device
+            # Use the correct initialization method
+            self.model = ChatterboxTTS.from_pretrained(device=self.device)
             
             print(f"✅ Model initialized on {self.device}")
             self.initialized = True
@@ -145,9 +135,23 @@ class VoiceCloner:
             
             # Save to file if path provided
             if output_path:
-                import soundfile as sf
-                sf.write(output_path, audio, 24000)
-                print(f"✅ Audio saved to: {output_path}")
+                try:
+                    import soundfile as sf
+                    # Ensure audio is in the right format for saving
+                    if hasattr(audio, 'numpy'):
+                        audio_np = audio.detach().cpu().numpy()
+                    else:
+                        audio_np = np.array(audio)
+                    
+                    # Ensure it's 1D
+                    if audio_np.ndim > 1:
+                        audio_np = audio_np.flatten()
+                    
+                    sf.write(output_path, audio_np, 24000, format='WAV')
+                    print(f"✅ Audio saved to: {output_path}")
+                except Exception as save_error:
+                    print(f"⚠️ Could not save audio file: {save_error}")
+                    # Continue anyway, audio generation was successful
                 
             return audio
             
