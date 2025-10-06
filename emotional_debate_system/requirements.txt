@@ -1,0 +1,21 @@
+# Core LLM
+ollama>=0.1.0
+
+# Emotion Detection
+transformers>=4.35.0
+torch>=2.1.0
+sentencepiece>=0.1.99
+
+# Text-to-Speech (Local)
+TTS>=0.22.0
+pydub>=0.25.1
+soundfile>=0.12.1
+
+# OSC Streaming
+python-osc>=1.8.3
+
+# Utilities
+pydantic>=2.5.0
+python-dotenv>=1.0.0
+numpy>=1.24.0
+scipy>=1.11.0

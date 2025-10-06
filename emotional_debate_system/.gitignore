@@ -1,0 +1,32 @@
+# Environment
+.env
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Models
+models/*.pt
+models/*.onnx
+models/*.bin
+
+# Data
+data/audio_output/*.wav
+data/audio_output/*.mp3
+data/debate_logs/*.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.cursor/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
