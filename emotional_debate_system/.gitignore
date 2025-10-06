@@ -1,21 +1,54 @@
 # Environment
 .env
 venv/
+venv_voice_cloning/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
+.venv
+env/
+ENV/
+env.bak/
+venv.bak/
 
-# Models
+# Models and Checkpoints
 models/*.pt
+models/*.pth
 models/*.onnx
 models/*.bin
+models/*.h5
+models/*.pkl
+models/*.pickle
+*.safetensors
+checkpoints/
+*.ckpt
+*.model
+*.weights
 
-# Data
+# Data and Audio Files
 data/audio_output/*.wav
 data/audio_output/*.mp3
+data/audio_output/*.flac
+data/audio_output/*.ogg
+data/audio_output/*.m4a
 data/debate_logs/*.json
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.m4a
+*.aac
+# Large data files
+*.csv
+*.parquet
+*.hdf5
+*.h5
+*.npz
+*.npy
+*.pkl
+*.pickle
 
 # IDE
 .vscode/
@@ -23,10 +56,47 @@ data/debate_logs/*.json
 *.swp
 .cursor/
 
-# OS
-.DS_Store
+# OS (Windows)
 Thumbs.db
 
 # Testing
 .pytest_cache/
 .coverage
+.tox/
+
+# Large files (>100MB)
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Video files
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+logs/
+temp/
+tmp/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# macOS specific
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
