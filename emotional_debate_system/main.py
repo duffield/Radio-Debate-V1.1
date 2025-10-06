@@ -10,14 +10,11 @@ from pathlib import Path
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent))
-# Add parent directory to path for config
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from config.config import config
 from llm.ollama_provider import OllamaLLM
 from emotion.detector import EmotionDetector
 from tts.coqui_provider import CoquiTTS
-from tts.macos_provider import MacOSTTS
 from streaming.osc_streamer import OSCStreamer
 
 class DebateSystem:
@@ -47,16 +44,7 @@ class DebateSystem:
         )
         
         print("\n🔊 Loading TTS...")
-        # Try macOS TTS first, fallback to Coqui
-        try:
-            self.tts = MacOSTTS(voice="Samantha")
-            if self.tts.is_available():
-                print("  Using macOS system TTS")
-            else:
-                raise RuntimeError("macOS TTS not available")
-        except Exception as e:
-            print(f"  macOS TTS not available ({e}), using simplified TTS")
-            self.tts = CoquiTTS(model_name=config.tts.model)
+        self.tts = CoquiTTS(model_name=config.tts.model)
         
         print("\n📡 Initializing OSC streaming...")
         self.osc = OSCStreamer(
@@ -121,8 +109,7 @@ class DebateSystem:
                     # Synthesize speech (optional)
                     if config.tts.save_audio:
                         print(f"  🎤 Generating speech...")
-                        # Pass character info for voice selection
-                        audio_path = self.tts.synthesize(response, character=character)
+                        audio_path = self.tts.synthesize(response)
                         print(f"  💾 Saved: {audio_path.name}")
                     
                     # Update for next round
@@ -130,7 +117,7 @@ class DebateSystem:
                     self.debate_history.append({
                         'agent': agent_name,
                         'round': round_num + 1,
-                        'response': response.model_dump()
+                        'response': response.dict()
                     })
                     
                 except Exception as e:
@@ -160,16 +147,12 @@ def main():
                        help="Number of debate rounds")
     parser.add_argument('--no-audio', action='store_true',
                        help="Disable audio synthesis")
-    parser.add_argument('--audio', action='store_true',
-                       help="Enable audio synthesis")
     
     args = parser.parse_args()
     
     # Override config if needed
     if args.no_audio:
         config.tts.save_audio = False
-    elif args.audio:
-        config.tts.save_audio = True
     
     try:
         system = DebateSystem()

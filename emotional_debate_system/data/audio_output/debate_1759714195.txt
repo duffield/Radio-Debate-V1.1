@@ -1,0 +1,5 @@
+Text: "Are you kidding me? There's no evidence whatsoever to support the existence of 'reptilian elites' and test audio is just that - a way for companies like Apple to improve their products, not some sinister plot. Can we please focus on actual facts and data instead of perpetuating baseless conspiracy theories?"
+Primary Emotion: neutral
+Valence: 0.00
+Arousal: 0.00
+Emotions: neutral(0.38), curiosity(0.31)

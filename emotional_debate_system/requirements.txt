@@ -1,5 +1,5 @@
 # Core LLM
-ollama>=0.1.0
+ollama>=0.6.0
 
 # Emotion Detection
 transformers>=4.35.0

@@ -10,7 +10,7 @@ class BaseTTS(ABC):
     """Abstract base class for TTS providers"""
     
     @abstractmethod
-    def synthesize(self, debate_response: DebateResponse, output_path: Optional[Path] = None) -> Path:
+    def synthesize(self, debate_response: DebateResponse, output_path: Optional[Path] = None, character: str = None) -> Path:
         """Synthesize speech from debate response"""
         pass
     
