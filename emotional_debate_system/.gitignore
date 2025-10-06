@@ -2,6 +2,7 @@
 .env
 venv/
 venv_voice_cloning/
+voice_m1_chatterbox/  # New conda environment
 __pycache__/
 *.pyc
 *.pyo
@@ -89,6 +90,15 @@ Thumbs.db
 logs/
 temp/
 tmp/
+
+# Voice cloning and audio session files
+voice_*.wav
+voice_*.mp3
+session_*.wav
+visitor_*.wav
+# Keep sample files for testing
+!voice_sample.wav
+!test_voice.wav
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/

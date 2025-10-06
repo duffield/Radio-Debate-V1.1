@@ -1,5 +1,0 @@
-Text: What's with the sudden interest in test audio? Is this a trap, a way for them to monitor our conversations, gather intel on our investigation into the reptilian elite? We can't afford to be complacent, not even for a moment.
-Primary Emotion: disapproval
-Valence: 0.00
-Arousal: 0.00
-Emotions: disapproval(0.33), curiosity(0.33)
