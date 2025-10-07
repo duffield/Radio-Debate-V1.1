@@ -18,6 +18,7 @@ from llm.ollama_provider import OllamaLLM
 from emotion.detector import EmotionDetector
 from tts.coqui_provider import CoquiTTS
 from tts.macos_provider import MacOSTTS
+from tts.chatterbox_provider import ChatterboxTTS
 from streaming.osc_streamer import OSCStreamer
 
 class DebateSystem:
@@ -47,16 +48,13 @@ class DebateSystem:
         )
         
         print("\n🔊 Loading TTS...")
-        # Try macOS TTS first, fallback to Coqui
-        try:
-            self.tts = MacOSTTS(voice="Samantha")
-            if self.tts.is_available():
-                print("  Using macOS system TTS")
-            else:
-                raise RuntimeError("macOS TTS not available")
-        except Exception as e:
-            print(f"  macOS TTS not available ({e}), using simplified TTS")
-            self.tts = CoquiTTS(model_name=config.tts.model)
+        # FORCE Chatterbox TTS with voice cloning - NO fallbacks
+        print("  Using Chatterbox TTS with voice cloning")
+        self.tts = ChatterboxTTS()
+        if not self.tts.is_available():
+            print("❌ Chatterbox TTS is required but not available!")
+            print("   Install with: pip install chatterbox")
+            sys.exit(1)
         
         print("\n📡 Initializing OSC streaming...")
         self.osc = OSCStreamer(
