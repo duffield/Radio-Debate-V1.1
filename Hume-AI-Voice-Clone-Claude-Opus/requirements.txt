@@ -1,0 +1,5 @@
+hume
+pyaudio
+requests
+numpy
+python-dotenv
