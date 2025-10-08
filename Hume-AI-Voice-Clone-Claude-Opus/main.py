@@ -239,32 +239,48 @@ class HumeVoiceCloneApp:
         # Initialize the voice client
         client = AsyncHumeClient(api_key=self.api_key)
         
-        # Create connection options
-        connect_options = ChatConnectOptions()
-        if config_id:
-            connect_options["config_id"] = config_id
+        # Create connection options dictionary
+        connect_options = {
+            "config_id": config_id,
+        }
         if self.secret_key:
             connect_options["secret_key"] = self.secret_key
         
         # Connect with the custom config
         async with client.empathic_voice.chat.connect(connect_options) as socket:
-            print("Connected! You can start chatting now.\n")
+            await self._handle_conversation(socket)
+    
+    async def _handle_conversation(self, socket):
+        """Handle the conversation loop with the socket."""
+        print("Connected! You can start chatting now.\n")
+        
+        while True:
+            # Get user input
+            user_message = input("You: ")
             
-            while True:
-                # Get user input
-                user_message = input("You: ")
-                
-                if user_message.lower() == 'quit':
-                    print("\n👋 Ending conversation...")
-                    break
-                
-                # Send message to the assistant
-                await socket.send_user_input(user_message)
-                
-                # Receive and print response
-                print("Assistant: ", end="", flush=True)
-                
+            if user_message.lower() == 'quit':
+                print("\n👋 Ending conversation...")
+                break
+            
+            # Send message to the assistant
+            try:
+                # Create a proper UserInput object
+                user_input = UserInput(text=user_message)
+                await socket.send_user_input(user_input)
+            except Exception as e:
+                print(f"\u274c Error sending message: {e}")
+                continue
+            
+            # Receive and print response
+            print("Assistant: ", end="", flush=True)
+            
+            try:
                 async for message in socket:
+                    print(f"\n[DEBUG] Message type: {type(message)}")
+                    print(f"[DEBUG] Message dir: {[attr for attr in dir(message) if not attr.startswith('_')][:10]}")
+                    if hasattr(message, '__dict__'):
+                        print(f"[DEBUG] Message dict: {message.__dict__}")
+                    
                     if isinstance(message, UserInput):
                         # Handle user interruption
                         continue
@@ -275,8 +291,15 @@ class HumeVoiceCloneApp:
                         # Print the assistant's response
                         if hasattr(message, 'content'):
                             print(message.content, end="", flush=True)
-                
-                print("\n")
+                        elif hasattr(message, 'text'):
+                            print(message.text, end="", flush=True)
+                        elif isinstance(message, dict) and 'text' in message:
+                            print(message['text'], end="", flush=True)
+                        # Don't break immediately - let's see more messages
+            except Exception as e:
+                print(f"\u274c Error receiving response: {e}")
+            
+            print("\n")
     
     def get_user_agreement(self) -> bool:
         """Get user agreement for voice recording and cloning.

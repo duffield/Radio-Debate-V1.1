@@ -1,171 +1,221 @@
 #!/usr/bin/env python3
 """
-Emotional AI Debate System
-Main entry point
+Simple TTS Debate System using Coqui TTS
+Uses the prepared voice models for voice cloning
 """
 
+import os
 import sys
 import time
 from pathlib import Path
+from typing import Optional
+import tempfile
+import subprocess
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent))
+# Try to import TTS
+try:
+    from TTS.api import TTS
+    TTS_AVAILABLE = True
+    print("✅ Coqui TTS loaded successfully!")
+except ImportError:
+    TTS_AVAILABLE = False
+    print("❌ Coqui TTS not available")
 
-from config.config import config
-from llm.ollama_provider import OllamaLLM
-from emotion.detector import EmotionDetector
-from tts.coqui_provider import CoquiTTS
-from streaming.osc_streamer import OSCStreamer
+class SimpleTTSDebater:
+    """Simple TTS debater using voice cloning"""
+    
+    def __init__(self, name: str, voice_sample_path: str):
+        self.name = name
+        self.voice_sample_path = voice_sample_path
+        self.tts = None
+        
+        print(f"🎭 Initializing {name}")
+        print(f"   Voice sample: {voice_sample_path}")
+        
+        if TTS_AVAILABLE:
+            try:
+                # Use CPU to avoid CUDA issues - YourTTS supports voice cloning
+                print("   Loading YourTTS model for voice cloning (CPU mode)...")
+                self.tts = TTS(
+                    model_name="tts_models/multilingual/multi-dataset/your_tts",
+                    gpu=False  # Force CPU mode
+                )
+                print("✅ TTS model loaded successfully!")
+            except Exception as e:
+                print(f"❌ Failed to load TTS: {e}")
+                self.tts = None
+    
+    def speak(self, text: str, play_immediately: bool = True) -> bool:
+        """Generate and play speech"""
+        if not self.tts:
+            print(f"❌ {self.name}: TTS not available, falling back to system TTS")
+            return self._system_tts_fallback(text)
+        
+        try:
+            print(f"🎤 {self.name}: Generating '{text[:50]}...'")
+            
+            # Create temporary file
+            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_file:
+                temp_path = temp_file.name
+            
+            # Check if voice sample exists and use it for cloning
+            if os.path.exists(self.voice_sample_path):
+                print(f"   Using voice sample for cloning: {Path(self.voice_sample_path).name}")
+                self.tts.tts_to_file(
+                    text=text,
+                    file_path=temp_path,
+                    speaker_wav=self.voice_sample_path,
+                    language="en"  # Required for YourTTS multilingual model
+                )
+            else:
+                print("   Using default voice (no sample found)")
+                self.tts.tts_to_file(
+                    text=text,
+                    file_path=temp_path,
+                    language="en"
+                )
+            
+            # Play the generated audio
+            if play_immediately and os.path.exists(temp_path):
+                print(f"🔊 {self.name}: Playing generated speech...")
+                # Use Python's sounddevice to play the audio directly
+                try:
+                    import soundfile as sf
+                    import sounddevice as sd
+                    
+                    # Read the audio file
+                    audio_data, samplerate = sf.read(temp_path)
+                    
+                    # Play using sounddevice (should work with any audio interface)
+                    print(f"   Playing via sounddevice...")
+                    sd.play(audio_data, samplerate)
+                    sd.wait()  # Wait for playback to finish
+                    
+                except ImportError:
+                    print(f"   ⚠️ sounddevice not available, trying afplay...")
+                    try:
+                        subprocess.run(["afplay", temp_path], check=False, timeout=30)
+                    except:
+                        print(f"   ⚠️ Could not play audio file")
+                except Exception as e:
+                    print(f"   ⚠️ Audio playback failed: {e}")
+                    # Fallback: just show that we generated it
+                    print(f"   🎧 Generated TTS audio saved to: {temp_path}")
+            
+            # Clean up
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ {self.name}: TTS generation failed: {e}")
+            return self._system_tts_fallback(text)
+    
+    def _system_tts_fallback(self, text: str) -> bool:
+        """Fallback to system TTS"""
+        try:
+            voice_map = {
+                "Truth Seeker": "Ralph",    # Deep, paranoid voice
+                "Skeptic": "Samantha"       # Clear, logical voice
+            }
+            voice = voice_map.get(self.name, "Alex")
+            
+            print(f"🔊 {self.name}: Speaking with system voice ({voice})")
+            subprocess.run(["say", "-v", voice, text], check=True)
+            return True
+            
+        except Exception as e:
+            print(f"❌ {self.name}: System TTS also failed: {e}")
+            return False
 
-class DebateSystem:
-    """Main debate orchestrator"""
+class SimpleTTSDebateSystem:
+    """Simple debate system with TTS voice cloning"""
     
     def __init__(self):
-        print("🦎 Initializing Emotional AI Debate System...")
-        print("="*60)
+        print("\n🎭 Simple TTS Debate System")
+        print("=" * 50)
         
-        # Initialize components
-        print("\n🤖 Loading LLM...")
-        self.llm = OllamaLLM(
-            model=config.llm.model,
-            host=config.llm.host
+        # Initialize debaters with their voice samples
+        self.debater_1 = SimpleTTSDebater(
+            "Truth Seeker",
+            "voice_samples/debater_1/voice_sample.mp3"
         )
         
-        # Check if Ollama is available
-        if not self.llm.is_available():
-            print("❌ Ollama is not running!")
-            print("   Start it with: ollama serve")
-            sys.exit(1)
-        
-        print("\n🧠 Loading emotion detector...")
-        self.emotion_detector = EmotionDetector(
-            model=config.emotion.model,
-            device=config.emotion.device
+        self.debater_2 = SimpleTTSDebater(
+            "Skeptic", 
+            "voice_samples/debater_2/voice_sample.mp3"
         )
         
-        print("\n🔊 Loading TTS...")
-        self.tts = CoquiTTS(model_name=config.tts.model)
-        
-        print("\n📡 Initializing OSC streaming...")
-        self.osc = OSCStreamer(
-            ip=config.osc.ip,
-            port=config.osc.port,
-            fps=config.osc.fps
-        )
-        
-        # Debate state
-        self.debate_history = []
-        
-        print("\n" + "="*60)
-        print("✅ System ready!\n")
+        print("\n✅ Debaters initialized!")
     
-    def run_debate_round(self, topic: str, rounds: int = 5):
-        """Run a complete debate"""
+    def run_debate(self, topic: str, rounds: int = 2):
+        """Run a debate with TTS voice cloning"""
+        print(f"\n🎭 Starting debate: '{topic}'")
+        print("=" * 50)
         
-        print(f"🎭 Starting debate on:\n   '{topic}'\n")
-        print("="*60)
-        
-        agents = [
-            ("Truth Seeker", "worried"),
-            ("Skeptic", "skeptical")
+        # Sample debate statements
+        debate_statements = [
+            # Round 1
+            [
+                f"I'm deeply concerned about {topic.lower()}. There are patterns here that people need to understand, connections that go deeper than most realize.",
+                f"Let's stick to facts and evidence. What specific, verifiable information do you have to support your claims about {topic.lower()}?"
+            ],
+            # Round 2
+            [
+                "The evidence is all around us if you know where to look. The mainstream sources won't tell you the real story.",
+                "That's exactly the problem - vague claims about 'evidence everywhere' without providing any concrete, credible sources. Show me peer-reviewed research or official documentation."
+            ],
+            # Additional rounds can be added here
         ]
         
-        last_response = f"Let's discuss: {topic}"
+        debaters = [self.debater_1, self.debater_2]
         
-        for round_num in range(rounds):
+        for round_num in range(min(rounds, len(debate_statements))):
             print(f"\n📊 Round {round_num + 1}/{rounds}")
-            print("-"*60)
+            print("-" * 40)
             
-            for agent_name, character in agents:
-                # Generate response
-                prompt = f"Respond to: {last_response}"
-                
-                print(f"\n💭 {agent_name} is thinking...")
-                
-                try:
-                    response = self.llm.generate_with_emotion(prompt, character)
-                    
-                    # Enrich with emotion detection
-                    response = self.emotion_detector.enrich_emotions(
-                        response, 
-                        threshold=config.emotion.threshold
-                    )
-                    
-                    # Display
-                    print(f"\n[{agent_name}]: {response.text}")
-                    
-                    # Show top 3 emotions
-                    emotion_str = ', '.join([
-                        f'{e.name}({e.intensity:.2f})' 
-                        for e in response.emotions[:3]
-                    ])
-                    print(f"  Emotions: {emotion_str}")
-                    print(f"  Valence: {response.valence:+.2f} | Arousal: {response.arousal:.2f}")
-                    
-                    # Stream to TouchDesigner
-                    agent_id = agent_name.lower().replace(" ", "_")
-                    self.osc.stream_debate_response(response, agent_id)
-                    
-                    # Synthesize speech (optional)
-                    if config.tts.save_audio:
-                        print(f"  🎤 Generating speech...")
-                        audio_path = self.tts.synthesize(response)
-                        print(f"  💾 Saved: {audio_path.name}")
-                    
-                    # Update for next round
-                    last_response = response.text
-                    self.debate_history.append({
-                        'agent': agent_name,
-                        'round': round_num + 1,
-                        'response': response.dict()
-                    })
-                    
-                except Exception as e:
-                    print(f"❌ Error: {e}")
-                    if config.debug:
-                        import traceback
-                        traceback.print_exc()
-                
-                time.sleep(1)  # Pause between speakers
+            statements = debate_statements[round_num]
             
-            print("\n" + "="*60)
+            for i, statement in enumerate(statements):
+                debater = debaters[i]
+                print(f"\n[{debater.name}]: {statement}")
+                
+                # Generate and play speech
+                success = debater.speak(statement)
+                if not success:
+                    print("   (Speech generation failed)")
+                
+                # Pause between debaters
+                time.sleep(1)
+            
+            print("\n" + "=" * 50)
         
         print("\n🏁 Debate complete!")
-        print(f"📝 Total exchanges: {len(self.debate_history)}")
-        return self.debate_history
 
 def main():
     """Main entry point"""
-    
     import argparse
     
-    parser = argparse.ArgumentParser(description="Emotional AI Debate System")
+    parser = argparse.ArgumentParser(description="Simple TTS Debate System")
     parser.add_argument('--topic', type=str, 
-                       default="Should we worry about shapeshifting lizard people controlling world governments?",
+                       default="artificial intelligence regulation",
                        help="Debate topic")
-    parser.add_argument('--rounds', type=int, default=3,
+    parser.add_argument('--rounds', type=int, default=2,
                        help="Number of debate rounds")
-    parser.add_argument('--no-audio', action='store_true',
-                       help="Disable audio synthesis")
     
     args = parser.parse_args()
     
-    # Override config if needed
-    if args.no_audio:
-        config.tts.save_audio = False
-    
     try:
-        system = DebateSystem()
-        system.run_debate_round(topic=args.topic, rounds=args.rounds)
+        system = SimpleTTSDebateSystem()
+        system.run_debate(topic=args.topic, rounds=args.rounds)
         
     except KeyboardInterrupt:
         print("\n\n⚠️  Debate interrupted by user")
     except Exception as e:
-        print(f"\n❌ Fatal error: {e}")
-        if config.debug:
-            import traceback
-            traceback.print_exc()
-        sys.exit(1)
+        print(f"\n❌ Error: {e}")
 
 if __name__ == "__main__":
     main()
